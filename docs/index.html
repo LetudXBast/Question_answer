@@ -78,12 +78,12 @@
   <script>
   //  appeler Render
       const BASE_API = "https://question-answer-07q9.onrender.com"; // ← remplace par ton URL Render
-      
-// Si ça recasse un jour, tu verras immédiatement l’erreur.
-    window.onerror = (msg, src, line, col, error) => {
-      console.error("JS error:", msg, "at", src, line+":"+col, error);
-      document.getElementById('status').textContent = "Erreur JS: " + msg;
-    };
+
+// // Si ça recasse un jour, tu verras immédiatement l’erreur.
+//     window.onerror = (msg, src, line, col, error) => {
+//       console.error("JS error:", msg, "at", src, line+":"+col, error);
+//       document.getElementById('status').textContent = "Erreur JS: " + msg;
+//     };
 
     // --- État minimal côté front ---
     /** conversation: tableau d'objets { id, question, answer } */
