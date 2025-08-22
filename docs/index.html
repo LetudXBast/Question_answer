@@ -77,7 +77,7 @@
 
   <script>
   //  appeler Render
-      const BASE_API = "https://question-answer-07q9.onrender.com/"; // ← remplace par ton URL Render
+      const BASE_API = "https://question-answer-07q9.onrender.com"; // ← remplace par ton URL Render
     // --- État minimal côté front ---
     /** conversation: tableau d'objets { id, question, answer } */
     const conversation = [];
@@ -136,7 +136,7 @@
         // ① on envoie les questions déjà posées
         const previousQuestions = conversation.map(({question}) => question);
 
-        const res = await fetch(${BASE_API}/ask, {
+        const res = await fetch(`${BASE_API}/ask`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ previous_questions: previousQuestions })
@@ -173,7 +173,7 @@
           pairs: conversation.map(({id, question, answer}) => ({ id, question, answer })),
           timestamp: new Date().toISOString()
         };
-        const res = await fetch(${BASE_API}/save, {
+        const res = await fetch(`${BASE_API}/save`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(payload)
@@ -189,7 +189,7 @@
     async function generatePdf() {
       setBusy(true); $status.textContent = 'Génération du PDF…';
       try {
-        const res = await fetch(${BASE_API}/pdf);
+        const res = await fetch(`${BASE_API}/pdf`);
         if (!res.ok) throw new Error('HTTP ' + res.status);
         const blob = await res.blob();
         const url = URL.createObjectURL(blob);
