@@ -1,3 +1,10 @@
+<!-- Schéma global
+Tu cliques sur un bouton dans le front (index.html).
+Le JS envoie une requête (fetch) à ton backend (app.py).
+Flask reçoit l’appel sur /ask, /save, ou /pdf.
+Flask traite : soit appelle Mistral, soit écrit/relit QR.txt, soit génère PDF.
+Réponse envoyée au navigateur, qui met à jour l’UI. -->
+
 <!DOCTYPE html>
 <html lang="fr">
 <head>
@@ -52,7 +59,6 @@
     .status { margin-top: 10px; font-size: 14px; color: #555; min-height: 1.2em; }
   </style>
 </head>
-<body>
   <header>
     <h1>Interface Q/R minimale</h1>
   </header>
@@ -78,17 +84,12 @@
   <script>
   //  appeler Render
       const BASE_API = "https://question-answer-07q9.onrender.com"; // ← remplace par ton URL Render
-
-// // Si ça recasse un jour, tu verras immédiatement l’erreur.
-//     window.onerror = (msg, src, line, col, error) => {
-//       console.error("JS error:", msg, "at", src, line+":"+col, error);
-//       document.getElementById('status').textContent = "Erreur JS: " + msg;
-//     };
+// BASE_API = ton backend Render
 
     // --- État minimal côté front ---
-    /** conversation: tableau d'objets { id, question, answer } */
+    /** conversation: tableau d'objets { id, question, answer } */     // ➡️ conversation = mémoire locale des Q/R
     const conversation = [];
-    let seq = 0; // identifiant simple croissant
+    let seq = 0; // identifiant simple croissant // ➡️ seq = compteur de questions
 
     // --- Helpers DOM ---
     const el = (id) => document.getElementById(id);
@@ -106,7 +107,7 @@
     function scrollToBottom() {
       $messages.scrollTop = $messages.scrollHeight;
     }
-
+// render() : affiche toutes les Q/R dans la zone chat.
     function render() {
       $messages.innerHTML = '';
       for (const item of conversation) {
@@ -124,11 +125,11 @@
       }
       scrollToBottom();
     }
-
+// escapeHTML() : évite les injections HTML.
     function escapeHTML(str='') {
       return str.replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;');
     }
-
+// lastUnanswered() : trouve la dernière question sans réponse.
     function lastUnanswered() {
       for (let i = conversation.length - 1; i >= 0; i--) {
         if (!conversation[i].answer || conversation[i].answer.trim() === '') return conversation[i];
@@ -137,8 +138,9 @@
     }
 
     // --- Actions ---
+    // askQuestion() : envoie la liste des questions déjà posées → reçoit une nouvelle question → l’ajoute.
     async function askQuestion() {
-      setBusy(true); $status.textContent = 'Génération de la question…';
+      setBusy(true); $status.textContent = 'Génération de la question…'; // setBusy(true/false) : active/désactive les boutons pendant les appels.
       try {
         // ① on envoie les questions déjà posées
         const previousQuestions = conversation.map(({question}) => question);
@@ -158,7 +160,7 @@
         console.error(err); $status.textContent = 'Erreur lors de la génération de la question.';
       } finally { setBusy(false); }
     }
-
+// sendAnswer() : ajoute une réponse saisie dans conversation.
     function sendAnswer() {
       const txt = $answer.value.trim();
       if (!txt) return;
@@ -172,7 +174,7 @@
       $answer.value = '';
       render();
     }
-
+// saveAll() : envoie toutes les Q/R au backend (/save).
     async function saveAll() {
       setBusy(true); $status.textContent = 'Enregistrement en cours…';
       try {
@@ -192,7 +194,7 @@
         console.error(err); $status.textContent = 'Erreur lors de l\'enregistrement.';
       } finally { setBusy(false); }
     }
-
+// generatePdf() : demande au backend un PDF (/pdf) → déclenche un téléchargement.
     async function generatePdf() {
       setBusy(true); $status.textContent = 'Génération du PDF…';
       try {
@@ -209,6 +211,13 @@
         console.error(err); $status.textContent = 'Erreur lors de la génération du PDF.';
       } finally { setBusy(false); }
     }
+// resetConversation() : remet tout à zéro côté front.
+    function resetConversation() {
+        conversation.splice(0, conversation.length); // vide le tableau
+        seq = 0;                                     // remet l’ID à zéro
+        render();                                    // rafraîchit l’affichage
+        $status.textContent = "Conversation réinitialisée";
+        }
 
     // --- Événements UI ---
     el('btnAsk').addEventListener('click', askQuestion);
@@ -218,26 +227,18 @@
     $answer.addEventListener('keydown', (e) => {
       if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendAnswer(); }
     });
+      // Listeners : chaque bouton appelle la fonction correspondante (btnAsk, btnSave, etc.).
+    el('btnReset').addEventListener('click', resetConversation);
 
     // Astuce: conserver la conversation si on recharge (optionnel)
     try {
-      const saved = sessionStorage.getItem('conversation');
+      const saved = sessionStorage.getItem('conversation'); //SessionStorage : sauvegarde l’état du chat quand tu recharges la page.
       if (saved) {
         const arr = JSON.parse(saved);
         if (Array.isArray(arr)) { conversation.splice(0, conversation.length, ...arr); seq = conversation.reduce((m, x) => Math.max(m, x.id||0), 0); render(); }
       }
       window.addEventListener('beforeunload', () => sessionStorage.setItem('conversation', JSON.stringify(conversation)));
     } catch {}
-
-    function resetConversation() {
-        conversation.splice(0, conversation.length); // vide le tableau
-        seq = 0;                                     // remet l’ID à zéro
-        render();                                    // rafraîchit l’affichage
-        $status.textContent = "Conversation réinitialisée";
-        }
-
-        // Listener
-        el('btnReset').addEventListener('click', resetConversation);
 
   </script>
 </body>

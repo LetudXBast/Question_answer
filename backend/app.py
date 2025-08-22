@@ -1,15 +1,14 @@
 import os
-import json
-from flask_cors import CORS
-from datetime import datetime
-from io import BytesIO
+import json # os, json = gestion fichiers et JSON
+from flask_cors import CORS # CORS = autorise l’accès depuis GitHub Pages (cross-origin)
+from datetime import datetime # datetime = date/heure pour logs et PDF
+from io import BytesIO # BytesIO = fichier en mémoire (PDF)
 
-import requests
-from flask import Flask, request, jsonify, send_file, abort
-from werkzeug.utils import safe_join
+import requests # requests = appel API Mistral
+from flask import Flask, request, jsonify, send_file, abort # flask = serveur web + API
+from werkzeug.utils import safe_join # safe_join = sécurise les chemins fichiers (évite des accès non autorisés)
 
-
-from dotenv import load_dotenv  # <-- ajout
+from dotenv import load_dotenv  # Charge les variables secrètes depuis backend/.env (ex. MISTRAL_API_KEY).
 # Charge le .env situé à côté de app.py (backend/.env)
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 load_dotenv(dotenv_path=os.path.join(BASE_DIR, ".env")) # ← charge le .env AVANT de lire les variables
@@ -17,7 +16,12 @@ load_dotenv(dotenv_path=os.path.join(BASE_DIR, ".env")) # ← charge le .env AVA
 
 
 
-# --- Config basique ---
+# --- Config basique --- 
+# Définit les chemins vers tes dossiers :
+# frontend/ pour l’UI,
+# data/QR.txt pour stocker questions/réponses,
+# prompts.txt pour les instructions IA.
+
 # BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 ROOT_DIR = os.path.dirname(BASE_DIR)
 FRONTEND_DIR = os.path.join(ROOT_DIR, "frontend")
@@ -25,15 +29,25 @@ DATA_DIR = os.path.join(BASE_DIR, "data")
 QR_PATH = os.path.join(DATA_DIR, "QR.txt")
 PROMPTS_PATH = os.path.join(BASE_DIR, "prompts.txt")
 
+# Récupère ta clé API (depuis .env),
+# Prépare l’URL et le modèle IA à utiliser.
 MISTRAL_API_KEY = os.getenv("MISTRAL_API_KEY", "")  # facultatif pour dev sans réseau
 print("MISTRAL_API_KEY chargée:", "OK" if bool(MISTRAL_API_KEY) else "ABSENTE") #Lance l’app. Tu dois voir OK en console.
 MISTRAL_ENDPOINT = "https://api.mistral.ai/v1/chat/completions"
 MISTRAL_MODEL = "mistral-small-latest"  # simple et économique
 
+# Crée le serveur Flask
+# Active CORS pour que GitHub Pages puisse l’appeler.
 app = Flask(__name__, static_folder=None)
 CORS(app, resources={r"/*": {"origins": "*"}})
 
 # --- Utilitaires ---
+# Fonctions utilitaires
+# ensure_dirs() → crée data/ si manquant.
+# read_prompts() → lit prompts.txt ou donne un texte par défaut.
+# mistral_generate_question() → construit le prompt, appelle l’API Mistral, nettoie la réponse.
+# append_qr_block() → ajoute les Q/R dans QR.txt avec horodatage.
+# build_pdf_from_qr() → lit QR.txt et génère un PDF en mémoire.
 def ensure_dirs():
     os.makedirs(DATA_DIR, exist_ok=True)
 
@@ -193,7 +207,7 @@ def serve_asset(asset):
     return data, 200, {"Content-Type": mime}
 
 # --- API attendue par le frontend ---
-
+# Génère une question Mistral, en tenant compte des questions déjà posées.
 @app.route("/ask", methods=["GET", "POST"])
 def api_ask():
     """
@@ -219,7 +233,7 @@ def api_ask():
             "warning": str(e)
         }), 200
 
-
+# Sauvegarde les questions/réponses reçues dans QR.txt.
 @app.route("/save", methods=["POST"])
 def api_save():
     """
@@ -237,6 +251,7 @@ def api_save():
     except Exception as e:
         return jsonify({"error": str(e)}), 400
 
+# Génère un PDF et l’envoie directement au navigateur.
 @app.route("/pdf", methods=["GET"])
 def api_pdf():
     """
@@ -256,6 +271,7 @@ def api_pdf():
         return jsonify({"error": str(e)}), 500
 
 # --- Lancement ---
+# Lance le serveur, écoute le port (Render fournit automatiquement PORT).
 if __name__ == "__main__":
     ensure_dirs()
     port = int(os.getenv("PORT", "5000"))   # Render fournit PORT
